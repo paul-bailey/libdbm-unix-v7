@@ -45,7 +45,7 @@ store_r_helper(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
                 item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         break;
-                if (calchash(item) & (db->hmask + 1)) {
+                if (!!(calchash(item) & (db->hmask + 1))) {
                         additem(ovfbuf, item);
                         delitem(db->pagbuf, i);
                         item = makdatum(db->pagbuf, i);
