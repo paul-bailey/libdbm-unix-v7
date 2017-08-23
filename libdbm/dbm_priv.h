@@ -42,4 +42,15 @@ extern int getbit(Database *db);
 /* forder.c */
 extern void dbm_access(Database *db, long hash);
 
+/*
+ * As a general rule, shared-object libraries shouldn't print to
+ * standard error.
+ */
+#if DBG_MESSAGING
+# include <stdio.h>
+# define DBG(msg, args...) fprintf(stderr, msg, ## args)
+#else
+# define DBG(msg, args...) do { (void)0; } while (0)
+#endif
+
 #endif /* DBM_PRIV_H */
