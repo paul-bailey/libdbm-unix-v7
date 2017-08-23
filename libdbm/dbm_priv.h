@@ -31,7 +31,7 @@ extern void delitem(char buf[PBLKSIZ], int n);
 extern void setbit(Database *db);
 extern int getbit(Database *db);
 
-/* dbm.c */
+/* forder.c */
 extern void dbm_access(Database *db, long hash);
 
 #endif /* DBM_PRIV_H */

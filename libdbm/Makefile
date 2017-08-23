@@ -1,6 +1,6 @@
 .PHONY: all clean
 objs := \
- dbm.o \
+ forder.o \
  calchash.o \
  datum.o \
  delete.o \
