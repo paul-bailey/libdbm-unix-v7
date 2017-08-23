@@ -1,7 +1,7 @@
 #include "dbm_priv.h"
 #include <stdio.h>
 
-datum
+datum EXPORT
 fetch(Database *db, datum key)
 {
         int i;

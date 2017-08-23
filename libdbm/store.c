@@ -105,7 +105,7 @@ ekey:
         return store_r_helper(db, key, dat, ovfbuf);
 }
 
-int
+int EXPORT
 store(Database *db, datum key, datum dat)
 {
         /*

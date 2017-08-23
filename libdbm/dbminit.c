@@ -7,26 +7,27 @@
 #include <unistd.h>
 #include <stdio.h>
 
-Database *
+Database EXPORT*
 dbminit(char *file)
 {
         struct stat statb;
         Database *db;
+        char *fname;
+
+        fname = alloca(strlen(file) + 5);
 
         db = malloc(sizeof(*db));
         if (!db)
                 goto emalloc;
 
         memset(db, 0, sizeof(*db));
-        strcpy(db->pagbuf, file);
-        strcat(db->pagbuf, ".pag");
-        db->pagfd = open(db->pagbuf, 2);
+        sprintf(fname, "%s.pag", file);
+        db->pagfd = open(fname, O_CREAT | O_RDWR);
         if (db->pagfd < 0)
                 goto epagfd;
 
-        strcpy(db->pagbuf, file);
-        strcat(db->pagbuf, ".dir");
-        db->dirfd = open(db->pagbuf, 2);
+        sprintf(fname, "%s.dir", file);
+        db->dirfd = open(fname, O_CREAT | O_RDWR);
         if (db->dirfd < 0)
                 goto edirfd;
 

@@ -42,13 +42,13 @@ firsthash(Database *db, long hash)
         }
 }
 
-datum
+datum EXPORT
 firstkey(Database *db)
 {
         return firsthash(db, 0L);
 }
 
-datum
+datum EXPORT
 nextkey(Database *db, datum key)
 {
         int i;

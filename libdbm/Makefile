@@ -10,10 +10,12 @@ objs := \
  fetch.o \
  dbminit.o
 
+CFLAGS += -Wall -fvisibility=hidden
+
 all: $(objs)
 
 %.o: %.c
-	$(CC) -c -Wall $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 clean:
 	$(RM) -r $(objs)

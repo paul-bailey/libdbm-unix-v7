@@ -1,4 +1,4 @@
-#include "dbm.h"
+#include "dbm_priv.h"
 
 static const int hitab[16] = {
         61, 57, 53, 49, 45, 41, 37, 33,
@@ -24,7 +24,7 @@ static const long hltab[64] = {
         04723077174L, 03642763134L, 05750130273L, 03655541561L,
 };
 
-long
+long EXPORT
 calchash(datum item)
 {
         int i, j, f;

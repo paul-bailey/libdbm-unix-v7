@@ -56,7 +56,7 @@ dbm_access(Database *db, long hash)
         }
 }
 
-long
+long EXPORT
 forder(Database *db, datum key)
 {
         hmask_cycle(db, calchash(key));

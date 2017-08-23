@@ -38,7 +38,7 @@ bad:
         abort();
 }
 
-int
+int EXPORT
 delete(Database *db, datum key)
 {
         int i;

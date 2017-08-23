@@ -3,6 +3,14 @@
 
 #include "dbm.h"
 
+#ifndef EXPORT
+# ifdef __GNUC__
+#  define EXPORT __attribute__((visibility("default")))
+# else
+#  define EXPORT
+# endif
+#endif
+
 struct Database {
        long bitno;
        long maxbno;
