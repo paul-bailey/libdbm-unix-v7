@@ -108,6 +108,7 @@ dbminit(char *file)
         if (!db)
                 goto emalloc;
 
+        memset(db, 0, sizeof(*db));
         strcpy(db->pagbuf, file);
         strcat(db->pagbuf, ".pag");
         db->pagfd = open(db->pagbuf, 2);
