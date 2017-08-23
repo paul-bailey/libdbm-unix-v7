@@ -28,7 +28,7 @@ static struct Database db = {
 };
 
 static void
-clrbuf(char *cp, int n)
+clearbuf(char *cp, int n)
 {
         memset(cp, 0, n);
 }
@@ -41,16 +41,18 @@ getbit(void)
 
         if (db.bitno > db.maxbno)
                 return 0;
+
         n = db.bitno % BYTESIZ;
         bn = db.bitno / BYTESIZ;
         i = bn % DBLKSIZ;
         b = bn / DBLKSIZ;
         if (b != db.getbit_oldb) {
-                clrbuf(db.dirbuf, DBLKSIZ);
+                clearbuf(db.dirbuf, DBLKSIZ);
                 lseek(db.dirf, (long)b*DBLKSIZ, 0);
                 read(db.dirf, db.dirbuf, DBLKSIZ);
                 db.getbit_oldb = b;
         }
+
         if (db.dirbuf[i] & (1 << n))
                 return 1;
         return 0;
@@ -78,12 +80,14 @@ setbit(void)
 static void
 hmask_cycle(long hash)
 {
-        for (db.hmask = 0;; db.hmask = (db.hmask << 1) + 1) {
-                db.blkno = hash & db.hmask;
-                db.bitno = db.blkno + db.hmask;
+        long hmask;
+        for (hmask = 0;; hmask = (hmask << 1) + 1) {
+                db.blkno = hash & hmask;
+                db.bitno = db.blkno + hmask;
                 if (getbit() == 0)
                         break;
         }
+        db.hmask = hmask;
 }
 
 static void
@@ -106,7 +110,7 @@ chkblk(char buf[PBLKSIZ])
 bad:
         printf("bad block\n");
         abort();
-        clrbuf(buf, PBLKSIZ);
+        clearbuf(buf, PBLKSIZ);
 }
 
 static void
@@ -115,7 +119,7 @@ dbm_access(long hash)
         hmask_cycle(hash);
 
         if (db.blkno != db.access_oldb) {
-                clrbuf(db.pagbuf, PBLKSIZ);
+                clearbuf(db.pagbuf, PBLKSIZ);
                 lseek(db.pagf, db.blkno * PBLKSIZ, 0);
                 read(db.pagf, db.pagbuf, PBLKSIZ);
                 chkblk(db.pagbuf);
@@ -361,7 +365,7 @@ split:
                 printf("entry too big\n");
                 return;
         }
-        clrbuf(ovfbuf, PBLKSIZ);
+        clearbuf(ovfbuf, PBLKSIZ);
         for (i = 0;;) {
                 item = makdatum(db.pagbuf, i);
                 if (item.dptr == NULL)
