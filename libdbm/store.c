@@ -35,7 +35,7 @@ store_r_helper(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
         int i;
 
         if (key.dsize + dat.dsize + 2 * sizeof(short) >= PBLKSIZ) {
-                fprintf(stderr, "entry too big\n");
+                DBG("entry too big\n");
                 return -1;
         }
 
@@ -50,7 +50,7 @@ store_r_helper(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
                         delitem(db->pagbuf, i);
                         item = makdatum(db->pagbuf, i);
                         if (item.dptr == NULL) {
-                                fprintf(stderr, "split not paired\n");
+                                DBG("split not paired\n");
                                 break;
                         }
                         additem(ovfbuf, item);
@@ -109,7 +109,7 @@ int EXPORT
 store(Database *db, datum key, datum dat)
 {
         /*
-         * Declared here because otherwise it may keep fill up the
+         * Declared here because otherwise it may keep filling up the
          * stack, even though each new declaration occurs after the
          * older instance is no longer used.
          */

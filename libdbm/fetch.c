@@ -15,7 +15,7 @@ fetch(Database *db, datum key)
                 if (cmpdatum(key, item) == 0) {
                         item = makdatum(db->pagbuf, i + 1);
                         if (item.dptr == NULL)
-                                fprintf(stderr, "items not in pairs\n");
+                                DBG("items not in pairs\n");
                         return item;
                 }
         }

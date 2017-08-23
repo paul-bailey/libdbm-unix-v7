@@ -43,6 +43,6 @@ edirfd:
 epagfd:
         free(db);
 emalloc:
-        fprintf(stderr, "cannot init DBM\n");
+        DBG("cannot init DBM\n");
         return NULL;
 }

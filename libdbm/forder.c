@@ -37,7 +37,7 @@ check_block(char buf[PBLKSIZ])
         return;
 
 bad:
-        fprintf(stderr, "bad block\n");
+        DBG("bad block\n");
         abort();
         memset(buf, 0, PBLKSIZ);
 }

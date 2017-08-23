@@ -34,7 +34,7 @@ delitem(char buf[PBLKSIZ], int n)
         return;
 
 bad:
-        fprintf(stderr, "bad delitem\n");
+        DBG("bad delitem\n");
         abort();
 }
 
