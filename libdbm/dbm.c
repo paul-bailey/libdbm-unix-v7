@@ -7,16 +7,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-long bitno;
-long maxbno;
-long blkno;
-long hmask;
+static long bitno;
+static long maxbno;
+static long blkno;
+static long hmask;
 
-char pagbuf[PBLKSIZ];
-char dirbuf[DBLKSIZ];
+static char pagbuf[PBLKSIZ] __attribute__((aligned(2)));
+static char dirbuf[DBLKSIZ];
 
-int dirf;
-int pagf;
+static int dirf;
+static int pagf;
 
 static void
 clrbuf(char *cp, int n)
@@ -68,6 +68,17 @@ setbit(void)
 }
 
 static void
+hmask_cycle(long hash)
+{
+        for (hmask = 0;; hmask = (hmask << 1) + 1) {
+                blkno = hash & hmask;
+                bitno = blkno + hmask;
+                if (getbit() == 0)
+                        break;
+        }
+}
+
+static void
 chkblk(char buf[PBLKSIZ])
 {
         short *sp;
@@ -95,12 +106,8 @@ dbm_access(long hash)
 {
         static long oldb = -1;
 
-        for (hmask=0;; hmask=(hmask<<1)+1) {
-                blkno = hash & hmask;
-                bitno = blkno + hmask;
-                if (getbit() == 0)
-                        break;
-        }
+        hmask_cycle(hash);
+
         if (blkno != oldb) {
                 clrbuf(pagbuf, PBLKSIZ);
                 lseek(pagf, blkno * PBLKSIZ, 0);
@@ -114,23 +121,16 @@ static int
 cmpdatum(datum d1, datum d2)
 {
         int n;
-        char *p1, *p2;
 
         n = d1.dsize;
         if (n != d2.dsize)
                 return n - d2.dsize;
         if (n == 0)
                 return 0;
-        p1 = d1.dptr;
-        p2 = d2.dptr;
-        do {
-                if (*p1++ != *p2++)
-                        return *--p1 - *--p2;
-        } while (--n);
-        return 0;
+        return memcmp(d1.dptr, d2.dptr, n);
 }
 
-short
+static short
 additem(char buf[PBLKSIZ], datum item)
 {
         short *sp;
@@ -153,7 +153,7 @@ additem(char buf[PBLKSIZ], datum item)
         return sp[0] - 1;
 }
 
-void
+static void
 delitem(char buf[PBLKSIZ], int n)
 {
         short *sp;
@@ -175,7 +175,7 @@ delitem(char buf[PBLKSIZ], int n)
                 buf[i1] = 0;
         }
         i2 -= i1;
-        for (i1=n + 1; i1 < sp[0]; i1++)
+        for (i1 = n + 1; i1 < sp[0]; i1++)
                 sp[i1 + 1 - 1] = sp[i1 + 1] + i2;
         sp[0]--;
         sp[sp[0] + 1] = 0;
@@ -184,6 +184,70 @@ delitem(char buf[PBLKSIZ], int n)
 bad:
         printf("bad delitem\n");
         abort();
+}
+
+static datum
+makdatum(char buf[PBLKSIZ], int n)
+{
+        short *sp;
+        int t;
+        datum item;
+
+        sp = (short *)buf;
+        if (n < 0 || n >= sp[0])
+                goto null;
+        t = PBLKSIZ;
+        if (n > 0)
+                t = sp[n + 1 - 1];
+        item.dptr = buf+sp[n + 1];
+        item.dsize = t - sp[n + 1];
+        return item;
+
+null:
+        item.dptr = NULL;
+        item.dsize = 0;
+        return item;
+}
+
+static long
+hashinc(long hash)
+{
+        long bit;
+
+        hash &= hmask;
+        bit = hmask + 1;
+        for (;;) {
+                bit >>= 1;
+                if (bit == 0)
+                        return 0L;
+                if ((hash & bit) == 0)
+                        return hash | bit;
+                hash &= ~bit;
+        }
+}
+
+static datum
+firsthash(long hash)
+{
+        int i;
+        datum item, bitem;
+
+        for (;;) {
+                dbm_access(hash);
+                bitem = makdatum(pagbuf, 0);
+                for (i = 2;; i += 2) {
+                        item = makdatum(pagbuf, i);
+                        if (item.dptr == NULL)
+                                break;
+                        if (cmpdatum(bitem, item) < 0)
+                                bitem = item;
+                }
+                if (bitem.dptr != NULL)
+                        return bitem;
+                hash = hashinc(hash);
+                if (hash == 0)
+                        return item;
+        }
 }
 
 int
@@ -210,15 +274,7 @@ dbminit(char *file)
 long
 forder(datum key)
 {
-        long hash;
-
-        hash = calchash(key);
-        for (hmask = 0;; hmask = (hmask << 1) + 1) {
-                blkno = hash & hmask;
-                bitno = blkno + hmask;
-                if (getbit() == 0)
-                        break;
-        }
+        hmask_cycle(calchash(key));
         return blkno;
 }
 
@@ -360,112 +416,4 @@ nextkey(datum key)
         if (hash == 0)
                 return item;
         return firsthash(hash);
-}
-
-datum
-firsthash(long hash)
-{
-        int i;
-        datum item, bitem;
-
-loop:
-        dbm_access(hash);
-        bitem = makdatum(pagbuf, 0);
-        for (i = 2;; i += 2) {
-                item = makdatum(pagbuf, i);
-                if (item.dptr == NULL)
-                        break;
-                if (cmpdatum(bitem, item) < 0)
-                        bitem = item;
-        }
-        if (bitem.dptr != NULL)
-                return bitem;
-        hash = hashinc(hash);
-        if (hash == 0)
-                return item;
-        goto loop;
-}
-
-datum
-makdatum(char buf[PBLKSIZ], int n)
-{
-        short *sp;
-        int t;
-        datum item;
-
-        sp = (short *)buf;
-        if (n < 0 || n >= sp[0])
-                goto null;
-        t = PBLKSIZ;
-        if (n > 0)
-                t = sp[n + 1 - 1];
-        item.dptr = buf+sp[n + 1];
-        item.dsize = t - sp[n + 1];
-        return item;
-
-null:
-        item.dptr = NULL;
-        item.dsize = 0;
-        return item;
-}
-
-int hitab[16] = {
-        61, 57, 53, 49, 45, 41, 37, 33,
-        29, 25, 21, 17, 13,  9,  5,  1,
-};
-
-long hltab[64] = {
-        06100151277L,06106161736L,06452611562L,05001724107L,
-        02614772546L,04120731531L,04665262210L,07347467531L,
-        06735253126L,06042345173L,03072226605L,01464164730L,
-        03247435524L,07652510057L,01546775256L,05714532133L,
-        06173260402L,07517101630L,02431460343L,01743245566L,
-        00261675137L,02433103631L,03421772437L,04447707466L,
-        04435620103L,03757017115L,03641531772L,06767633246L,
-        02673230344L,00260612216L,04133454451L,00615531516L,
-        06137717526L,02574116560L,02304023373L,07061702261L,
-        05153031405L,05322056705L,07401116734L,06552375715L,
-        06165233473L,05311063631L,01212221723L,01052267235L,
-        06000615237L,01075222665L,06330216006L,04402355630L,
-        01451177262L,02000133436L,06025467062L,07121076461L,
-        03123433522L,01010635225L,01716177066L,05161746527L,
-        01736635071L,06243505026L,03637211610L,01756474365L,
-        04723077174L,03642763134L,05750130273L,03655541561L,
-};
-
-long
-hashinc(long hash)
-{
-        long bit;
-
-        hash &= hmask;
-        bit = hmask + 1;
-        for (;;) {
-                bit >>= 1;
-                if (bit == 0)
-                        return 0L;
-                if ((hash&bit) == 0)
-                        return hash | bit;
-                hash &= ~bit;
-        }
-}
-
-long
-calchash(datum item)
-{
-        int i, j, f;
-        long hashl;
-        int hashi;
-
-        hashl = 0;
-        hashi = 0;
-        for (i=0; i < item.dsize; i++) {
-                f = item.dptr[i];
-                for (j = 0; j < BYTESIZ; j += 4) {
-                        hashi += hitab[f & 017];
-                        hashl += hltab[hashi & 077];
-                        f >>= 4;
-                }
-        }
-        return hashl;
 }

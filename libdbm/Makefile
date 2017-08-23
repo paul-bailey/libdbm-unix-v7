@@ -1,5 +1,5 @@
 .PHONY: all clean
-objs := dbm.o
+objs := dbm.o calchash.o
 
 all: $(objs)
 
