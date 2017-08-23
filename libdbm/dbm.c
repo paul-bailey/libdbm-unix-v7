@@ -22,11 +22,6 @@ struct Database {
        int getbit_oldb;
 };
 
-static struct Database db = {
-        .access_oldb = -1,
-        .getbit_oldb = -1,
-};
-
 static void
 clearbuf(char *cp, int n)
 {
@@ -34,60 +29,60 @@ clearbuf(char *cp, int n)
 }
 
 static int
-getbit(void)
+getbit(Database *db)
 {
         long bn;
         int b, i, n;
 
-        if (db.bitno > db.maxbno)
+        if (db->bitno > db->maxbno)
                 return 0;
 
-        n = db.bitno % BYTESIZ;
-        bn = db.bitno / BYTESIZ;
+        n = db->bitno % BYTESIZ;
+        bn = db->bitno / BYTESIZ;
         i = bn % DBLKSIZ;
         b = bn / DBLKSIZ;
-        if (b != db.getbit_oldb) {
-                clearbuf(db.dirbuf, DBLKSIZ);
-                lseek(db.dirf, (long)b*DBLKSIZ, 0);
-                read(db.dirf, db.dirbuf, DBLKSIZ);
-                db.getbit_oldb = b;
+        if (b != db->getbit_oldb) {
+                clearbuf(db->dirbuf, DBLKSIZ);
+                lseek(db->dirf, (long)b * DBLKSIZ, 0);
+                read(db->dirf, db->dirbuf, DBLKSIZ);
+                db->getbit_oldb = b;
         }
 
-        if (db.dirbuf[i] & (1 << n))
+        if (db->dirbuf[i] & (1 << n))
                 return 1;
         return 0;
 }
 
 static void
-setbit(void)
+setbit(Database *db)
 {
         long bn;
         int i, n, b;
 
-        if (db.bitno > db.maxbno) {
-                db.maxbno = db.bitno;
-                getbit();
+        if (db->bitno > db->maxbno) {
+                db->maxbno = db->bitno;
+                getbit(db);
         }
-        n = db.bitno % BYTESIZ;
-        bn = db.bitno / BYTESIZ;
+        n = db->bitno % BYTESIZ;
+        bn = db->bitno / BYTESIZ;
         i = bn % DBLKSIZ;
         b = bn / DBLKSIZ;
-        db.dirbuf[i] |= 1<<n;
-        lseek(db.dirf, (long)b * DBLKSIZ, 0);
-        write(db.dirf, db.dirbuf, DBLKSIZ);
+        db->dirbuf[i] |= 1<<n;
+        lseek(db->dirf, (long)b * DBLKSIZ, 0);
+        write(db->dirf, db->dirbuf, DBLKSIZ);
 }
 
 static void
-hmask_cycle(long hash)
+hmask_cycle(Database *db, long hash)
 {
         long hmask;
         for (hmask = 0;; hmask = (hmask << 1) + 1) {
-                db.blkno = hash & hmask;
-                db.bitno = db.blkno + hmask;
-                if (getbit() == 0)
+                db->blkno = hash & hmask;
+                db->bitno = db->blkno + hmask;
+                if (getbit(db) == 0)
                         break;
         }
-        db.hmask = hmask;
+        db->hmask = hmask;
 }
 
 static void
@@ -114,16 +109,16 @@ bad:
 }
 
 static void
-dbm_access(long hash)
+dbm_access(Database *db, long hash)
 {
-        hmask_cycle(hash);
+        hmask_cycle(db, hash);
 
-        if (db.blkno != db.access_oldb) {
-                clearbuf(db.pagbuf, PBLKSIZ);
-                lseek(db.pagf, db.blkno * PBLKSIZ, 0);
-                read(db.pagf, db.pagbuf, PBLKSIZ);
-                chkblk(db.pagbuf);
-                db.access_oldb = db.blkno;
+        if (db->blkno != db->access_oldb) {
+                clearbuf(db->pagbuf, PBLKSIZ);
+                lseek(db->pagf, db->blkno * PBLKSIZ, 0);
+                read(db->pagf, db->pagbuf, PBLKSIZ);
+                chkblk(db->pagbuf);
+                db->access_oldb = db->blkno;
         }
 }
 
@@ -220,12 +215,12 @@ null:
 }
 
 static long
-hashinc(long hash)
+hashinc(Database *db, long hash)
 {
         long bit;
 
-        hash &= db.hmask;
-        bit = db.hmask + 1;
+        hash &= db->hmask;
+        bit = db->hmask + 1;
         for (;;) {
                 bit >>= 1;
                 if (bit == 0)
@@ -237,16 +232,16 @@ hashinc(long hash)
 }
 
 static datum
-firsthash(long hash)
+firsthash(Database *db, long hash)
 {
         int i;
         datum item, bitem;
 
         for (;;) {
-                dbm_access(hash);
-                bitem = makdatum(db.pagbuf, 0);
+                dbm_access(db, hash);
+                bitem = makdatum(db->pagbuf, 0);
                 for (i = 2;; i += 2) {
-                        item = makdatum(db.pagbuf, i);
+                        item = makdatum(db->pagbuf, i);
                         if (item.dptr == NULL)
                                 break;
                         if (cmpdatum(bitem, item) < 0)
@@ -254,53 +249,69 @@ firsthash(long hash)
                 }
                 if (bitem.dptr != NULL)
                         return bitem;
-                hash = hashinc(hash);
+                hash = hashinc(db, hash);
                 if (hash == 0)
                         return item;
         }
 }
 
-int
+Database *
 dbminit(char *file)
 {
         struct stat statb;
+        Database *db;
 
-        strcpy(db.pagbuf, file);
-        strcat(db.pagbuf, ".pag");
-        db.pagf = open(db.pagbuf, 2);
+        db = malloc(sizeof(*db));
+        if (!db)
+                goto emalloc;
 
-        strcpy(db.pagbuf, file);
-        strcat(db.pagbuf, ".dir");
-        db.dirf = open(db.pagbuf, 2);
-        if (db.pagf < 0 || db.dirf < 0) {
-                printf("cannot open database %s\n", file);
-                return -1;
-        }
-        fstat(db.dirf, &statb);
-        db.maxbno = statb.st_size * BYTESIZ - 1;
-        return 0;
+        strcpy(db->pagbuf, file);
+        strcat(db->pagbuf, ".pag");
+        db->pagf = open(db->pagbuf, 2);
+        if (db->pagf < 0)
+                goto epagf;
+
+        strcpy(db->pagbuf, file);
+        strcat(db->pagbuf, ".dir");
+        db->dirf = open(db->pagbuf, 2);
+        if (db->dirf < 0)
+                goto edirf;
+
+        fstat(db->dirf, &statb);
+        db->maxbno = statb.st_size * BYTESIZ - 1;
+        db->access_oldb = -1;
+        db->getbit_oldb = -1;
+        return db;
+
+        /* close db->dirf if more err proc. before this */
+edirf:
+        close(db->pagf);
+epagf:
+        free(db);
+emalloc:
+        return NULL;
 }
 
 long
-forder(datum key)
+forder(Database *db, datum key)
 {
-        hmask_cycle(calchash(key));
-        return db.blkno;
+        hmask_cycle(db, calchash(key));
+        return db->blkno;
 }
 
 datum
-fetch(datum key)
+fetch(Database *db, datum key)
 {
         int i;
         datum item;
 
-        dbm_access(calchash(key));
+        dbm_access(db, calchash(key));
         for (i = 0;; i += 2) {
-                item = makdatum(db.pagbuf, i);
+                item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         return item;
                 if (cmpdatum(key, item) == 0) {
-                        item = makdatum(db.pagbuf, i + 1);
+                        item = makdatum(db->pagbuf, i + 1);
                         if (item.dptr == NULL)
                                 printf("items not in pairs\n");
                         return item;
@@ -309,55 +320,55 @@ fetch(datum key)
 }
 
 int
-delete(datum key)
+delete(Database *db, datum key)
 {
         int i;
         datum item;
 
-        dbm_access(calchash(key));
+        dbm_access(db, calchash(key));
         for (i = 0;; i += 2) {
-                item = makdatum(db.pagbuf, i);
+                item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         return -1;
                 if (cmpdatum(key, item) == 0) {
-                        delitem(db.pagbuf, i);
-                        delitem(db.pagbuf, i);
+                        delitem(db->pagbuf, i);
+                        delitem(db->pagbuf, i);
                         break;
                 }
         }
-        lseek(db.pagf, db.blkno * PBLKSIZ, 0);
-        write(db.pagf, db.pagbuf, PBLKSIZ);
+        lseek(db->pagf, db->blkno * PBLKSIZ, 0);
+        write(db->pagf, db->pagbuf, PBLKSIZ);
         return 0;
 }
 
 void
-store(datum key, datum dat)
+store(Database *db, datum key, datum dat)
 {
         int i;
         datum item;
         char ovfbuf[PBLKSIZ];
 
 loop:
-        dbm_access(calchash(key));
+        dbm_access(db, calchash(key));
         for (i = 0;; i += 2) {
-                item = makdatum(db.pagbuf, i);
+                item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         break;
                 if (cmpdatum(key, item) == 0) {
-                        delitem(db.pagbuf, i);
-                        delitem(db.pagbuf, i);
+                        delitem(db->pagbuf, i);
+                        delitem(db->pagbuf, i);
                         break;
                 }
         }
-        i = additem(db.pagbuf, key);
+        i = additem(db->pagbuf, key);
         if (i < 0)
                 goto split;
-        if (additem(db.pagbuf, dat) < 0) {
-                delitem(db.pagbuf, i);
+        if (additem(db->pagbuf, dat) < 0) {
+                delitem(db->pagbuf, i);
                 goto split;
         }
-        lseek(db.pagf, db.blkno * PBLKSIZ, 0);
-        write(db.pagf, db.pagbuf, PBLKSIZ);
+        lseek(db->pagf, db->blkno * PBLKSIZ, 0);
+        write(db->pagf, db->pagbuf, PBLKSIZ);
         return;
 
 split:
@@ -367,39 +378,39 @@ split:
         }
         clearbuf(ovfbuf, PBLKSIZ);
         for (i = 0;;) {
-                item = makdatum(db.pagbuf, i);
+                item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         break;
-                if (calchash(item) & (db.hmask + 1)) {
+                if (calchash(item) & (db->hmask + 1)) {
                         additem(ovfbuf, item);
-                        delitem(db.pagbuf, i);
-                        item = makdatum(db.pagbuf, i);
+                        delitem(db->pagbuf, i);
+                        item = makdatum(db->pagbuf, i);
                         if (item.dptr == NULL) {
                                 printf("split not paired\n");
                                 break;
                         }
                         additem(ovfbuf, item);
-                        delitem(db.pagbuf, i);
+                        delitem(db->pagbuf, i);
                         continue;
                 }
                 i += 2;
         }
-        lseek(db.pagf, db.blkno * PBLKSIZ, 0);
-        write(db.pagf, db.pagbuf, PBLKSIZ);
-        lseek(db.pagf, (db.blkno + db.hmask + 1) * PBLKSIZ, 0);
-        write(db.pagf, ovfbuf, PBLKSIZ);
-        setbit();
+        lseek(db->pagf, db->blkno * PBLKSIZ, 0);
+        write(db->pagf, db->pagbuf, PBLKSIZ);
+        lseek(db->pagf, (db->blkno + db->hmask + 1) * PBLKSIZ, 0);
+        write(db->pagf, ovfbuf, PBLKSIZ);
+        setbit(db);
         goto loop;
 }
 
 datum
-firstkey(void)
+firstkey(Database *db)
 {
-        return firsthash(0L);
+        return firsthash(db, 0L);
 }
 
 datum
-nextkey(datum key)
+nextkey(Database *db, datum key)
 {
         int i;
         datum item, bitem;
@@ -407,10 +418,10 @@ nextkey(datum key)
         int f;
 
         hash = calchash(key);
-        dbm_access(hash);
+        dbm_access(db, hash);
         f = 1;
         for (i = 0;; i += 2) {
-                item = makdatum(db.pagbuf, i);
+                item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         break;
                 if (cmpdatum(key, item) <= 0)
@@ -422,8 +433,8 @@ nextkey(datum key)
         }
         if (f == 0)
                 return bitem;
-        hash = hashinc(hash);
+        hash = hashinc(db, hash);
         if (hash == 0)
                 return item;
-        return firsthash(hash);
+        return firsthash(db, hash);
 }

@@ -17,13 +17,15 @@ typedef struct {
         int dsize;
 } datum;
 
-extern int dbminit(char *file);
-extern long forder(datum key);
-extern datum fetch(datum key);
-extern int delete(datum key);
-extern void store(datum key, datum dat);
-extern datum firstkey(void);
-extern datum nextkey(datum key);
+typedef struct Database Database;
+
+extern Database *dbminit(char *file);
+extern long forder(Database *db, datum key);
+extern datum fetch(Database *db, datum key);
+extern int delete(Database *db, datum key);
+extern void store(Database *db, datum key, datum dat);
+extern datum firstkey(Database *db);
+extern datum nextkey(Database *db, datum key);
 
 extern long calchash(datum item);
 
