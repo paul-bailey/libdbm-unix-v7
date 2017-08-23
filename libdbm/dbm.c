@@ -21,7 +21,7 @@ hmask_cycle(Database *db, long hash)
 }
 
 static void
-chkblk(char buf[PBLKSIZ])
+check_block(char buf[PBLKSIZ])
 {
         short *sp;
         int t, i;
@@ -52,49 +52,8 @@ dbm_access(Database *db, long hash)
                 memset(db->pagbuf, 0, PBLKSIZ);
                 lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
                 read(db->pagfd, db->pagbuf, PBLKSIZ);
-                chkblk(db->pagbuf);
+                check_block(db->pagbuf);
                 db->access_oldb = db->blkno;
-        }
-}
-
-static long
-hashinc(Database *db, long hash)
-{
-        long bit;
-
-        hash &= db->hmask;
-        bit = db->hmask + 1;
-        for (;;) {
-                bit >>= 1;
-                if (bit == 0)
-                        return 0L;
-                if ((hash & bit) == 0)
-                        return hash | bit;
-                hash &= ~bit;
-        }
-}
-
-static datum
-firsthash(Database *db, long hash)
-{
-        int i;
-        datum item, bitem;
-
-        for (;;) {
-                dbm_access(db, hash);
-                bitem = makdatum(db->pagbuf, 0);
-                for (i = 2;; i += 2) {
-                        item = makdatum(db->pagbuf, i);
-                        if (item.dptr == NULL)
-                                break;
-                        if (cmpdatum(bitem, item) < 0)
-                                bitem = item;
-                }
-                if (bitem.dptr != NULL)
-                        return bitem;
-                hash = hashinc(db, hash);
-                if (hash == 0)
-                        return item;
         }
 }
 
@@ -142,60 +101,4 @@ forder(Database *db, datum key)
 {
         hmask_cycle(db, calchash(key));
         return db->blkno;
-}
-
-datum
-fetch(Database *db, datum key)
-{
-        int i;
-        datum item;
-
-        dbm_access(db, calchash(key));
-        for (i = 0;; i += 2) {
-                item = makdatum(db->pagbuf, i);
-                if (item.dptr == NULL)
-                        return item;
-                if (cmpdatum(key, item) == 0) {
-                        item = makdatum(db->pagbuf, i + 1);
-                        if (item.dptr == NULL)
-                                fprintf(stderr, "items not in pairs\n");
-                        return item;
-                }
-        }
-}
-
-datum
-firstkey(Database *db)
-{
-        return firsthash(db, 0L);
-}
-
-datum
-nextkey(Database *db, datum key)
-{
-        int i;
-        datum item, bitem;
-        long hash;
-        int f;
-
-        hash = calchash(key);
-        dbm_access(db, hash);
-        f = 1;
-        for (i = 0;; i += 2) {
-                item = makdatum(db->pagbuf, i);
-                if (item.dptr == NULL)
-                        break;
-                if (cmpdatum(key, item) <= 0)
-                        continue;
-                if (f || cmpdatum(bitem, item) < 0) {
-                        bitem = item;
-                        f = 0;
-                }
-        }
-        if (f == 0)
-                return bitem;
-        hash = hashinc(db, hash);
-        if (hash == 0)
-                return item;
-        return firsthash(db, hash);
 }
