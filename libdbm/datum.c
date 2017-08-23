@@ -22,17 +22,15 @@ makdatum(char buf[PBLKSIZ], int n)
         datum item;
 
         sp = (short *)buf;
-        if (n < 0 || n >= sp[0])
-                goto nullate;
-        t = PBLKSIZ;
-        if (n > 0)
-                t = sp[n + 1 - 1];
-        item.dptr = buf+sp[n + 1];
-        item.dsize = t - sp[n + 1];
-        return item;
-
-nullate:
-        item.dptr = NULL;
-        item.dsize = 0;
+        if (n < 0 || n >= sp[0]) {
+                item.dptr = NULL;
+                item.dsize = 0;
+        } else {
+                t = PBLKSIZ;
+                if (n > 0)
+                        t = sp[n + 1 - 1];
+                item.dptr = buf + sp[n + 1];
+                item.dsize = t - sp[n + 1];
+        }
         return item;
 }
