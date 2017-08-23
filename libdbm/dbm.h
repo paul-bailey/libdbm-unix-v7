@@ -23,7 +23,7 @@ extern Database *dbminit(char *file);
 extern long forder(Database *db, datum key);
 extern datum fetch(Database *db, datum key);
 extern int delete(Database *db, datum key);
-extern void store(Database *db, datum key, datum dat);
+extern int store(Database *db, datum key, datum dat);
 extern datum firstkey(Database *db);
 extern datum nextkey(Database *db, datum key);
 

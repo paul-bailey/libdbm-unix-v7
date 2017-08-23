@@ -13,11 +13,13 @@ struct Database {
        long blkno;
        long hmask;
 
+       /* name of .pag and .dir files */
        char pagbuf[PBLKSIZ] __attribute__((aligned(2)));
        char dirbuf[DBLKSIZ] __attribute__((aligned(2)));
 
-       int dirf;
-       int pagf;
+       /* descriptors of .pag and .dir files */
+       int dirfd;
+       int pagfd;
        int access_oldb;
        int getbit_oldb;
 };
@@ -28,48 +30,57 @@ clearbuf(char *cp, int n)
         memset(cp, 0, n);
 }
 
+/* Used for breaking a big bit number down to block-byte-bit */
+struct bitidx_t {
+        int i; /* Byte no. within block */
+        int b; /* Block no. */
+        int n; /* Bit no. within byte */
+};
+
+/* helper to getbit() and setbit() */
+static void
+fill_bitidx(long bitno, struct bitidx_t *b)
+{
+        long bn;
+        b->n = bitno % BYTESIZ;
+        bn = bitno / BYTESIZ;
+        b->i = bn % DBLKSIZ;
+        b->b = bn / DBLKSIZ;
+}
+
 static int
 getbit(Database *db)
 {
-        long bn;
-        int b, i, n;
+        struct bitidx_t b;
 
         if (db->bitno > db->maxbno)
                 return 0;
 
-        n = db->bitno % BYTESIZ;
-        bn = db->bitno / BYTESIZ;
-        i = bn % DBLKSIZ;
-        b = bn / DBLKSIZ;
-        if (b != db->getbit_oldb) {
+        fill_bitidx(db->bitno, &b);
+        if (b.b != db->getbit_oldb) {
                 clearbuf(db->dirbuf, DBLKSIZ);
-                lseek(db->dirf, (long)b * DBLKSIZ, 0);
-                read(db->dirf, db->dirbuf, DBLKSIZ);
-                db->getbit_oldb = b;
+                lseek(db->dirfd, (long)b.b * DBLKSIZ, 0);
+                read(db->dirfd, db->dirbuf, DBLKSIZ);
+                db->getbit_oldb = b.b;
         }
 
-        if (db->dirbuf[i] & (1 << n))
-                return 1;
-        return 0;
+        return !!(db->dirbuf[b.i] & (1 << b.n));
 }
 
 static void
 setbit(Database *db)
 {
-        long bn;
-        int i, n, b;
+        struct bitidx_t b;
 
         if (db->bitno > db->maxbno) {
                 db->maxbno = db->bitno;
                 getbit(db);
         }
-        n = db->bitno % BYTESIZ;
-        bn = db->bitno / BYTESIZ;
-        i = bn % DBLKSIZ;
-        b = bn / DBLKSIZ;
-        db->dirbuf[i] |= 1<<n;
-        lseek(db->dirf, (long)b * DBLKSIZ, 0);
-        write(db->dirf, db->dirbuf, DBLKSIZ);
+        fill_bitidx(db->bitno, &b);
+
+        db->dirbuf[b.i] |= 1 << b.n;
+        lseek(db->dirfd, (long)b.b * DBLKSIZ, 0);
+        write(db->dirfd, db->dirbuf, DBLKSIZ);
 }
 
 static void
@@ -103,7 +114,7 @@ chkblk(char buf[PBLKSIZ])
         return;
 
 bad:
-        printf("bad block\n");
+        fprintf(stderr, "bad block\n");
         abort();
         clearbuf(buf, PBLKSIZ);
 }
@@ -115,8 +126,8 @@ dbm_access(Database *db, long hash)
 
         if (db->blkno != db->access_oldb) {
                 clearbuf(db->pagbuf, PBLKSIZ);
-                lseek(db->pagf, db->blkno * PBLKSIZ, 0);
-                read(db->pagf, db->pagbuf, PBLKSIZ);
+                lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
+                read(db->pagfd, db->pagbuf, PBLKSIZ);
                 chkblk(db->pagbuf);
                 db->access_oldb = db->blkno;
         }
@@ -172,12 +183,13 @@ delitem(char buf[PBLKSIZ], int n)
         if (n > 0)
                 i2 = sp[n + 1 - 1];
         i3 = sp[sp[0] + 1 - 1];
-        if (i2 > i1)
-        while (i1 > i3) {
-                i1--;
-                i2--;
-                buf[i2] = buf[i1];
-                buf[i1] = 0;
+        if (i2 > i1) {
+                while (i1 > i3) {
+                        i1--;
+                        i2--;
+                        buf[i2] = buf[i1];
+                        buf[i1] = 0;
+                }
         }
         i2 -= i1;
         for (i1 = n + 1; i1 < sp[0]; i1++)
@@ -187,7 +199,7 @@ delitem(char buf[PBLKSIZ], int n)
         return;
 
 bad:
-        printf("bad delitem\n");
+        fprintf(stderr, "bad delitem\n");
         abort();
 }
 
@@ -200,7 +212,7 @@ makdatum(char buf[PBLKSIZ], int n)
 
         sp = (short *)buf;
         if (n < 0 || n >= sp[0])
-                goto null;
+                goto nullate;
         t = PBLKSIZ;
         if (n > 0)
                 t = sp[n + 1 - 1];
@@ -208,7 +220,7 @@ makdatum(char buf[PBLKSIZ], int n)
         item.dsize = t - sp[n + 1];
         return item;
 
-null:
+nullate:
         item.dptr = NULL;
         item.dsize = 0;
         return item;
@@ -267,28 +279,29 @@ dbminit(char *file)
 
         strcpy(db->pagbuf, file);
         strcat(db->pagbuf, ".pag");
-        db->pagf = open(db->pagbuf, 2);
-        if (db->pagf < 0)
-                goto epagf;
+        db->pagfd = open(db->pagbuf, 2);
+        if (db->pagfd < 0)
+                goto epagfd;
 
         strcpy(db->pagbuf, file);
         strcat(db->pagbuf, ".dir");
-        db->dirf = open(db->pagbuf, 2);
-        if (db->dirf < 0)
-                goto edirf;
+        db->dirfd = open(db->pagbuf, 2);
+        if (db->dirfd < 0)
+                goto edirfd;
 
-        fstat(db->dirf, &statb);
+        fstat(db->dirfd, &statb);
         db->maxbno = statb.st_size * BYTESIZ - 1;
         db->access_oldb = -1;
         db->getbit_oldb = -1;
         return db;
 
-        /* close db->dirf if more err proc. before this */
-edirf:
-        close(db->pagf);
-epagf:
+        /* close db->dirfd if more err proc. before this */
+edirfd:
+        close(db->pagfd);
+epagfd:
         free(db);
 emalloc:
+        fprintf(stderr, "cannot init DBM\n");
         return NULL;
 }
 
@@ -313,7 +326,7 @@ fetch(Database *db, datum key)
                 if (cmpdatum(key, item) == 0) {
                         item = makdatum(db->pagbuf, i + 1);
                         if (item.dptr == NULL)
-                                printf("items not in pairs\n");
+                                fprintf(stderr, "items not in pairs\n");
                         return item;
                 }
         }
@@ -336,48 +349,25 @@ delete(Database *db, datum key)
                         break;
                 }
         }
-        lseek(db->pagf, db->blkno * PBLKSIZ, 0);
-        write(db->pagf, db->pagbuf, PBLKSIZ);
+        lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
+        write(db->pagfd, db->pagbuf, PBLKSIZ);
         return 0;
 }
 
-void
-store(Database *db, datum key, datum dat)
+static int store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ]);
+static int
+store_r_helper(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
 {
         int i;
-        datum item;
-        char ovfbuf[PBLKSIZ];
 
-loop:
-        dbm_access(db, calchash(key));
-        for (i = 0;; i += 2) {
-                item = makdatum(db->pagbuf, i);
-                if (item.dptr == NULL)
-                        break;
-                if (cmpdatum(key, item) == 0) {
-                        delitem(db->pagbuf, i);
-                        delitem(db->pagbuf, i);
-                        break;
-                }
-        }
-        i = additem(db->pagbuf, key);
-        if (i < 0)
-                goto split;
-        if (additem(db->pagbuf, dat) < 0) {
-                delitem(db->pagbuf, i);
-                goto split;
-        }
-        lseek(db->pagf, db->blkno * PBLKSIZ, 0);
-        write(db->pagf, db->pagbuf, PBLKSIZ);
-        return;
-
-split:
         if (key.dsize + dat.dsize + 2 * sizeof(short) >= PBLKSIZ) {
-                printf("entry too big\n");
-                return;
+                fprintf(stderr, "entry too big\n");
+                return -1;
         }
+
         clearbuf(ovfbuf, PBLKSIZ);
         for (i = 0;;) {
+                datum item;
                 item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         break;
@@ -386,7 +376,7 @@ split:
                         delitem(db->pagbuf, i);
                         item = makdatum(db->pagbuf, i);
                         if (item.dptr == NULL) {
-                                printf("split not paired\n");
+                                fprintf(stderr, "split not paired\n");
                                 break;
                         }
                         additem(ovfbuf, item);
@@ -395,12 +385,62 @@ split:
                 }
                 i += 2;
         }
-        lseek(db->pagf, db->blkno * PBLKSIZ, 0);
-        write(db->pagf, db->pagbuf, PBLKSIZ);
-        lseek(db->pagf, (db->blkno + db->hmask + 1) * PBLKSIZ, 0);
-        write(db->pagf, ovfbuf, PBLKSIZ);
+        lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
+        write(db->pagfd, db->pagbuf, PBLKSIZ);
+        lseek(db->pagfd, (db->blkno + db->hmask + 1) * PBLKSIZ, 0);
+        write(db->pagfd, ovfbuf, PBLKSIZ);
         setbit(db);
-        goto loop;
+
+        /* now recursively try again */
+        return store_r(db, key, dat, ovfbuf);
+}
+
+static int
+store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
+{
+        int i;
+        int keyi, datai;
+
+        dbm_access(db, calchash(key));
+        for (i = 0;; i += 2) {
+                datum item = makdatum(db->pagbuf, i);
+                if (item.dptr == NULL)
+                        break;
+                if (cmpdatum(key, item) == 0) {
+                        delitem(db->pagbuf, i);
+                        delitem(db->pagbuf, i);
+                        break;
+                }
+        }
+
+        keyi = additem(db->pagbuf, key);
+        if (i < 0)
+                goto ekey;
+
+        datai = additem(db->pagbuf, dat);
+        if (datai < 0)
+                goto edat;
+
+        lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
+        write(db->pagfd, db->pagbuf, PBLKSIZ);
+        return 0;
+
+edat:
+        delitem(db->pagbuf, keyi);
+ekey:
+        return store_r_helper(db, key, dat, ovfbuf);
+}
+
+int
+store(Database *db, datum key, datum dat)
+{
+        /*
+         * Declared here because otherwise it may keep fill up the
+         * stack, even though each new declaration occurs after the
+         * older instance is no longer used.
+         */
+        char ovfbuf[PBLKSIZ];
+        return store_r(db, key, dat, ovfbuf);
 }
 
 datum
