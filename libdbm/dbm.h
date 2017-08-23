@@ -1,30 +1,42 @@
-#define	PBLKSIZ	512
-#define	DBLKSIZ	8192
-#define	BYTESIZ	8
-#define	NULL	((char *) 0)
+#ifndef DBM_H
+# define DBM_H
 
-long	bitno;
-long	maxbno;
-long	blkno;
-long	hmask;
-
-char	pagbuf[PBLKSIZ];
-char	dirbuf[DBLKSIZ];
-
-int	dirf;
-int	pagf;
-
-typedef	struct
+#ifdef __cplusplus
+extern "C"
 {
-	char	*dptr;
-	int	dsize;
+#endif
+
+#define PBLKSIZ 512
+#define DBLKSIZ 8192
+#define BYTESIZ 8
+#define NULL    ((char *) 0)
+
+extern long bitno;
+extern long maxbno;
+extern long blkno;
+extern long hmask;
+
+extern char pagbuf[PBLKSIZ];
+extern char dirbuf[DBLKSIZ];
+
+extern int dirf;
+extern int pagf;
+
+typedef struct {
+        char *dptr;
+        int dsize;
 } datum;
 
-datum	fetch();
-datum	makdatum();
-datum	firstkey();
-datum	nextkey();
-datum	firsthash();
-long	calchash();
-long	hashinc();
+extern datum fetch(datum key);
+extern datum makdatum(char buf[PBLKSIZ], int n);
+extern datum firstkey(void);
+extern datum nextkey(datum key);
+extern datum firsthash(long hash);
+extern long calchash(datum item);
+extern long hashinc(long hash);
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DBM_H */
