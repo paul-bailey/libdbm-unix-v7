@@ -29,11 +29,7 @@ struct Database {
 };
 
 /* datum.c */
-extern datum makdatum(char buf[PBLKSIZ], int n);
 extern int cmpdatum(datum d1, datum d2);
-
-/* delete.c */
-extern void delitem(char buf[PBLKSIZ], int n);
 
 /* bits.c */
 extern void setbit(Database *db);
@@ -41,6 +37,11 @@ extern int getbit(Database *db);
 
 /* forder.c */
 extern void dbm_access(Database *db, long hash);
+
+/* buffer.c */
+extern datum makdatum(char buf[PBLKSIZ], int idx);
+extern void delitem(char buf[PBLKSIZ], int idx);
+extern int additem(char buf[PBLKSIZ], datum item);
 
 /*
  * As a general rule, shared-object libraries shouldn't print to

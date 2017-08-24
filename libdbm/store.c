@@ -4,33 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 
-static short
-additem(char buf[PBLKSIZ], datum item)
-{
-        short *sp;
-        int i;
-
-        sp = (short *)buf;
-        i = sp[0] > 0 ? sp[sp[0]] : PBLKSIZ;
-        i -= item.dsize;
-
-        /* Make sure we can fit index no. and data */
-        if (i <= ((sp[0] + 2) * sizeof(short)))
-                return -1;
-
-        /* Store index number */
-        sp[sp[0] + 1] = i;
-
-        /* Store data */
-        memcpy(&buf[i], item.dptr, item.dsize);
-
-        /* Update index count */
-        sp[0]++;
-
-        /* Return old index count. */
-        return sp[0] - 1;
-}
-
 static int
 store_helper(Database *db, datum key, datum dat)
 {

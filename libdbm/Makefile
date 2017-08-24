@@ -8,6 +8,7 @@ objs := \
  bits.o \
  key.o \
  fetch.o \
+ buffer.o \
  dbminit.o
 
 CFLAGS += -Wall -fvisibility=hidden
