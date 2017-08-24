@@ -53,7 +53,8 @@ AC_CHECK_FUNCS([strtoul strtoull])
 
 AC_CONFIG_FILES([Makefile
                  libdbm/Makefile
-                 include/Makefile])
+                 include/Makefile
+                 examples/Makefile])
 
 # ==== Print final messages to user =====================================
 

@@ -23,12 +23,12 @@ dbminit(char *file)
 
         memset(db, 0, sizeof(*db));
         sprintf(fname, "%s.pag", file);
-        db->pagfd = open(fname, O_CREAT | O_RDWR);
+        db->pagfd = open(fname, O_CREAT | O_RDWR, 0666);
         if (db->pagfd < 0)
                 goto epagfd;
 
         sprintf(fname, "%s.dir", file);
-        db->dirfd = open(fname, O_CREAT | O_RDWR);
+        db->dirfd = open(fname, O_CREAT | O_RDWR, 0666);
         if (db->dirfd < 0)
                 goto edirfd;
 

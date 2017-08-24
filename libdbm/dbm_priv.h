@@ -7,6 +7,7 @@
 # ifdef __GNUC__
 #  define EXPORT __attribute__((visibility("default")))
 # else
+#  error "None of this works if ain't gnu"
 #  define EXPORT
 # endif
 #endif

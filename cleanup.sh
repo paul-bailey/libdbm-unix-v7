@@ -11,7 +11,9 @@ libtool
 autom4te.cache/
 aclocal.m4'
 
-subdirs='include
+subdirs='
+include
+examples
 libdbm
 '
 
