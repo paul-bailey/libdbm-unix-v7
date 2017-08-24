@@ -11,7 +11,7 @@ store_helper(Database *db, datum key, datum dat)
         int i;
         char ovfbuf[PBLKSIZ];
 
-        if (key.dsize + dat.dsize + 2 * sizeof(short) >= PBLKSIZ) {
+        if (key.dsize + dat.dsize + 3 * sizeof(short) >= PBLKSIZ) {
                 DBG("entry too big\n");
                 return -1;
         }
