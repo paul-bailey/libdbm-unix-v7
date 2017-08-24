@@ -16,6 +16,11 @@ delete(Database *db, datum key)
                 if (item.dptr == NULL)
                         return -1;
                 if (cmpdatum(key, item) == 0) {
+                        /*
+                         * Delete both key and data.
+                         * Do not update i here because
+                         * delitem() shifts items over.
+                         */
                         delitem(db->pagbuf, i);
                         delitem(db->pagbuf, i);
                         break;
