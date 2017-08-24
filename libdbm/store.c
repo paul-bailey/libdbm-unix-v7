@@ -18,8 +18,7 @@ store_helper(Database *db, datum key, datum dat)
 
         memset(ovfbuf, 0, PBLKSIZ);
         for (i = 0;;) {
-                datum item;
-                item = makdatum(db->pagbuf, i);
+                datum item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
                         break;
                 if (!!(calchash(item) & (db->hmask + 1))) {
