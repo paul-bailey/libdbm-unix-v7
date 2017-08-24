@@ -16,23 +16,26 @@ additem(char buf[PBLKSIZ], datum item)
         if (sp[0] > 0)
                 i1 = sp[sp[0] + 1 - 1];
         i1 -= item.dsize;
+
         i2 = (sp[0] + 2) * sizeof(short);
         if (i1 <= i2)
                 return -1;
+
         sp[sp[0] + 1] = i1;
         for (i2 = 0; i2 < item.dsize; i2++) {
                 buf[i1] = item.dptr[i2];
                 i1++;
         }
+
         sp[0]++;
         return sp[0] - 1;
 }
 
-static int store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ]);
 static int
-store_r_helper(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
+store_helper(Database *db, datum key, datum dat)
 {
         int i;
+        char ovfbuf[PBLKSIZ];
 
         if (key.dsize + dat.dsize + 2 * sizeof(short) >= PBLKSIZ) {
                 DBG("entry too big\n");
@@ -66,11 +69,11 @@ store_r_helper(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
         setbit(db);
 
         /* now recursively try again */
-        return store_r(db, key, dat, ovfbuf);
+        return 0;
 }
 
-static int
-store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
+int EXPORT
+store(Database *db, datum key, datum dat)
 {
         int i;
         int keyi, datai;
@@ -81,6 +84,7 @@ store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
                 if (item.dptr == NULL)
                         break;
                 if (cmpdatum(key, item) == 0) {
+                        /* TODO: Is this a collision? */
                         delitem(db->pagbuf, i);
                         delitem(db->pagbuf, i);
                         break;
@@ -88,7 +92,7 @@ store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
         }
 
         keyi = additem(db->pagbuf, key);
-        if (i < 0)
+        if (keyi < 0)
                 goto ekey;
 
         datai = additem(db->pagbuf, dat);
@@ -102,19 +106,8 @@ store_r(Database *db, datum key, datum dat, char ovfbuf[PBLKSIZ])
 edat:
         delitem(db->pagbuf, keyi);
 ekey:
-        return store_r_helper(db, key, dat, ovfbuf);
-}
+        if (store_helper(db, key, dat) < 0)
+                return -1;
 
-int EXPORT
-store(Database *db, datum key, datum dat)
-{
-        /*
-         * Declared here because otherwise it may keep filling up the
-         * stack, even though each new declaration occurs after the
-         * older instance is no longer used.
-         *
-         * Presumably this is faster than malloc/free calls.
-         */
-        char ovfbuf[PBLKSIZ];
-        return store_r(db, key, dat, ovfbuf);
+        return store(db, key, dat);
 }
