@@ -14,6 +14,7 @@ dbminit(char *file)
         Database *db;
         char *fname;
 
+        /* TODO: Stack protection */
         fname = alloca(strlen(file) + 5);
 
         db = malloc(sizeof(*db));

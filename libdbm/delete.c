@@ -5,31 +5,38 @@
 #include <stdio.h>
 
 void
-delitem(char buf[PBLKSIZ], int n)
+delitem(char buf[PBLKSIZ], int idx)
 {
         short *sp;
-        int i1, i2, i3;
+        int datai, previ, botti, idxi;
 
         sp = (short *)buf;
-        if (n < 0 || n >= sp[0])
+        if (idx < 0 || idx >= sp[0])
                 goto bad;
-        i1 = sp[n + 1];
-        i2 = PBLKSIZ;
-        if (n > 0)
-                i2 = sp[n + 1 - 1];
-        i3 = sp[sp[0] + 1 - 1];
-        if (i2 > i1) {
-                while (i1 > i3) {
-                        i1--;
-                        i2--;
-                        buf[i2] = buf[i1];
-                        buf[i1] = 0;
+
+        datai = sp[idx + 1];
+        previ = idx > 0 ? sp[idx] : PBLKSIZ;
+        botti = sp[sp[0]];
+
+        /* Maybe move data to fill in hole. */
+        if (previ > datai) {
+                while (datai > botti) {
+                        datai--;
+                        previ--;
+                        buf[previ] = buf[datai];
+                        buf[datai] = 0;
                 }
         }
-        i2 -= i1;
-        for (i1 = n + 1; i1 < sp[0]; i1++)
-                sp[i1 + 1 - 1] = sp[i1 + 1] + i2;
+        previ -= datai;
+
+        /* Update shift higher indices to fill in removed index */
+        for (idxi = idx + 1; idxi < sp[0]; idxi++)
+                sp[idxi] = sp[idxi + 1] + previ;
+
+        /* Update index count */
         sp[0]--;
+
+        /* Clear old index number */
         sp[sp[0] + 1] = 0;
         return;
 

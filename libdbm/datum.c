@@ -14,23 +14,27 @@ cmpdatum(datum d1, datum d2)
         return memcmp(d1.dptr, d2.dptr, n);
 }
 
+/**
+ * makdatum - Create a &datum type for data in buf whose index is idx
+ * @buf: The database buffer containing the data
+ * @idx: The index of the data-index
+ */
 datum
-makdatum(char buf[PBLKSIZ], int n)
+makdatum(char buf[PBLKSIZ], int idx)
 {
         short *sp;
-        int t;
         datum item;
 
         sp = (short *)buf;
-        if (n < 0 || n >= sp[0]) {
+        if (idx < 0 || idx >= sp[0]) {
                 item.dptr = NULL;
                 item.dsize = 0;
         } else {
-                t = PBLKSIZ;
-                if (n > 0)
-                        t = sp[n + 1 - 1];
-                item.dptr = buf + sp[n + 1];
-                item.dsize = t - sp[n + 1];
+                int t = PBLKSIZ;
+                if (idx > 0)
+                        t = sp[idx];
+                item.dptr = buf + sp[idx + 1];
+                item.dsize = t - sp[idx + 1];
         }
         return item;
 }

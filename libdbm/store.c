@@ -3,31 +3,31 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdio.h>
 
 static short
 additem(char buf[PBLKSIZ], datum item)
 {
         short *sp;
-        int i1, i2;
+        int i;
 
         sp = (short *)buf;
-        i1 = PBLKSIZ;
-        if (sp[0] > 0)
-                i1 = sp[sp[0] + 1 - 1];
-        i1 -= item.dsize;
+        i = sp[0] > 0 ? sp[sp[0]] : PBLKSIZ;
+        i -= item.dsize;
 
-        i2 = (sp[0] + 2) * sizeof(short);
-        if (i1 <= i2)
+        /* Make sure we can fit index no. and data */
+        if (i <= ((sp[0] + 2) * sizeof(short)))
                 return -1;
 
-        sp[sp[0] + 1] = i1;
-        for (i2 = 0; i2 < item.dsize; i2++) {
-                buf[i1] = item.dptr[i2];
-                i1++;
-        }
+        /* Store index number */
+        sp[sp[0] + 1] = i;
 
+        /* Store data */
+        memcpy(&buf[i], item.dptr, item.dsize);
+
+        /* Update index count */
         sp[0]++;
+
+        /* Return old index count. */
         return sp[0] - 1;
 }
 
