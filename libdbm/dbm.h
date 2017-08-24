@@ -23,6 +23,7 @@ typedef struct {
         int dsize;
 } datum;
 
+/* FIXME: Make this type threadsafe. Currently it is not. */
 typedef struct Database Database;
 
 extern Database *dbminit(char *file);

@@ -112,6 +112,8 @@ store(Database *db, datum key, datum dat)
          * Declared here because otherwise it may keep filling up the
          * stack, even though each new declaration occurs after the
          * older instance is no longer used.
+         *
+         * Presumably this is faster than malloc/free calls.
          */
         char ovfbuf[PBLKSIZ];
         return store_r(db, key, dat, ovfbuf);

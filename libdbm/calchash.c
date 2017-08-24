@@ -24,6 +24,11 @@ static const long hltab[64] = {
         04723077174L, 03642763134L, 05750130273L, 03655541561L,
 };
 
+/**
+ * calchash - Hash number calculation for libdbm
+ *
+ * Return: Hash number calculated from datum @item.
+ */
 long EXPORT
 calchash(datum item)
 {

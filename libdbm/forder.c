@@ -6,6 +6,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/*
+ * Find which block number/bit number contains data whose key yields
+ * @hash.
+ *
+ * dbm_access() and forder() call this to set db->hmask, db->bitno, and
+ * db->blkno, which are referenced by their calling functions.
+ */
 static void
 hmask_cycle(Database *db, long hash)
 {
@@ -19,6 +26,7 @@ hmask_cycle(Database *db, long hash)
         db->hmask = hmask;
 }
 
+/* Make sure @buf is a valid block, panic otherwise */
 static void
 check_block(char buf[PBLKSIZ])
 {
@@ -42,6 +50,10 @@ bad:
         memset(buf, 0, PBLKSIZ);
 }
 
+/*
+ * Refill @db's page buffer with page containing data whose key yields
+ * @hash, unless that is already the current page in the buffer.
+ */
 void
 dbm_access(Database *db, long hash)
 {
@@ -56,9 +68,13 @@ dbm_access(Database *db, long hash)
         }
 }
 
+/*
+ * Get the block number of datum whose key is @key
+ */
 long EXPORT
 forder(Database *db, datum key)
 {
+        /* TODO: A version of this that doesn't mess up db local vars? */
         hmask_cycle(db, calchash(key));
         return db->blkno;
 }
