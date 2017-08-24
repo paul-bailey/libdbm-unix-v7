@@ -24,6 +24,8 @@ main(int argc, char **argv)
                 exit(EXIT_FAILURE);
         }
         res = fetch(db, key);
+        if (res.dptr == NULL)
+                res.dptr = "(NULL)";
         printf("%s\n", res.dptr);
         return 0;
 }

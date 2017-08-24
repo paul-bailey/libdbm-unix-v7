@@ -48,7 +48,7 @@ extern int additem(char buf[PBLKSIZ], datum item);
  * As a general rule, shared-object libraries shouldn't print to
  * standard error.
  */
-#if DBG_MESSAGING
+#if (DBG_MESSAGING == 1)
 # include <stdio.h>
 # define DBG(msg, args...) fprintf(stderr, msg, ## args)
 #else

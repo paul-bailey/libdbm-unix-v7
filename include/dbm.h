@@ -13,10 +13,8 @@ enum {
         BYTESIZ = 8,
 };
 
-/* Options */
-enum {
-        DBG_MESSAGING = 1,
-};
+/* Options - some are preprocessed, so they can't be enums */
+#define DBG_MESSAGING 0
 
 typedef struct {
         char *dptr;
