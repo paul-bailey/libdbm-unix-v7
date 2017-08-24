@@ -5,7 +5,7 @@
 /**
  * makdatum - Create a &datum type for data in buf whose index is idx
  * @buf: The database buffer containing the data
- * @idx: The index of the data-index
+ * @idx: Visible index of datum in @buf
  */
 datum
 makdatum(char buf[PBLKSIZ], int idx)
@@ -27,6 +27,13 @@ makdatum(char buf[PBLKSIZ], int idx)
         return item;
 }
 
+/**
+ * delitem - Delete a datum stored in a buffer
+ * @buf: Page buffer containing data to delete
+ * @idx: Visible index of datum in @buf
+ *
+ * The program will abort if @idx is not a datum stored in @buf.
+ */
 void
 delitem(char buf[PBLKSIZ], int idx)
 {
@@ -68,6 +75,16 @@ bad:
         abort();
 }
 
+/**
+ * Add a datum to a page buffer
+ * @buf: Page buffer to store datum in
+ * @item: Datum to copy into @buf
+ *
+ * Return: Visible index of datum in @buf.  If it's the first datum stored
+ * in this buffer, the return value will be 0. If it's the second, the
+ * return value will be 1, and so on... If there is not room left in the
+ * buffer the return value will be -1.
+ */
 int
 additem(char buf[PBLKSIZ], datum item)
 {

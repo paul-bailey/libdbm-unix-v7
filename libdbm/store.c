@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+/* Create a new page in the database */
 static int
 store_helper(Database *db, datum key, datum dat)
 {
@@ -35,16 +36,23 @@ store_helper(Database *db, datum key, datum dat)
                 }
                 i += 2;
         }
+
         lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
         write(db->pagfd, db->pagbuf, PBLKSIZ);
         lseek(db->pagfd, (db->blkno + db->hmask + 1) * PBLKSIZ, 0);
         write(db->pagfd, ovfbuf, PBLKSIZ);
+
         setbit(db);
 
         /* now recursively try again */
         return 0;
 }
 
+/**
+ * store - Store key/data pair
+ *
+ * Return: 0 if stored successfully, -1 if the entry is too big.
+ */
 int EXPORT
 store(Database *db, datum key, datum dat)
 {
@@ -52,6 +60,7 @@ store(Database *db, datum key, datum dat)
         int keyi, datai;
 
         dbm_access(db, calchash(key));
+
         for (i = 0;; i += 2) {
                 datum item = makdatum(db->pagbuf, i);
                 if (item.dptr == NULL)
