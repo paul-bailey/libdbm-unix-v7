@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libdbm],[0.1],[baileyp2012@gmail.com])
+AC_INIT([libegdbm],[0.1],[baileyp2012@gmail.com])
 
 AC_CONFIG_AUX_DIR([build])
 AC_CONFIG_MACRO_DIR([m4])

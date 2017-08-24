@@ -1,7 +1,7 @@
 #ifndef DBM_PRIV_H
 #define DBM_PRIV_H
 
-#include "dbm.h"
+#include "egdbm.h"
 
 #ifndef EXPORT
 # ifdef __GNUC__

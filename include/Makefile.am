@@ -1,1 +1,1 @@
-include_HEADERS = dbm.h
+include_HEADERS = egdbm.h

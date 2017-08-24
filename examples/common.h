@@ -1,7 +1,7 @@
 #ifndef EXAMPLES_COMMON_H
 #define EXAMPLES_COMMON_H
 
-#include <dbm.h>
+#include <egdbm.h>
 
 #define DBNAME "example-db"
 
