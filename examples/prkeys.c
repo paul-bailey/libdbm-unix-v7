@@ -1,4 +1,5 @@
 #include "common.h"
+#include "../libdbm/dbm_priv.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,9 @@ main(int argc, char **argv)
                  */
                 printf("key: '%s'\n", key.dptr);
                 printf("\tdat: '%s'\n", dat.dptr);
+                printf("\torder: %lu\n", forder(db, key));
+                printf("\thash:  %lu\n", calchash(key));
         }
+        printf("db->maxbno = %lu\n", db->maxbno);
         return 0;
 }
