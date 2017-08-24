@@ -15,7 +15,7 @@ main(int argc, char **argv)
         }
 
         key.dptr = argv[1];
-        key.dsize = strlen(argv[1] + 1);
+        key.dsize = strlen(argv[1]) + 1;
 
         db_set_path();
         db = dbminit(dbpath);
