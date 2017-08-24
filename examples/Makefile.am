@@ -1,6 +1,7 @@
 local_examples = \
  fetch \
  store \
+ delete \
  prkeys
 
 noinst_PROGRAMS = $(local_examples)
@@ -13,3 +14,6 @@ store_LDADD = $(top_srcdir)/libdbm/libdbm.la
 prkeys_SOURCES = prkeys.c common.c
 prkeys_CPPFLAGS = -I$(top_srcdir)/include
 prkeys_LDADD = $(top_srcdir)/libdbm/libdbm.la
+delete_SOURCES = delete.c common.c
+delete_CPPFLAGS = -I$(top_srcdir)/include
+delete_LDADD = $(top_srcdir)/libdbm/libdbm.la
