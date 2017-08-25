@@ -27,6 +27,17 @@ count_bits(unsigned long v)
         return v;
 }
 
+static int
+count_shift(unsigned long v)
+{
+        int count = 0;
+        while ((v & 01) == 0 && count < 32) {
+                ++count;
+                v >>= 1;
+        }
+        return count;
+}
+
 static long
 parse_value(const char *svalue)
 {
@@ -158,6 +169,8 @@ dbminit(const char *file)
         db->maxbno = statb.st_size * BYTESIZ - 1;
         db->access_oldb = -1;
         db->getbit_oldb = -1;
+        db->dblkshift = count_shift(db->dblksiz);
+        db->pblkshift = count_shift(db->pblksiz);
         return db;
 
         /* close db->dirfd if more err proc. before this */

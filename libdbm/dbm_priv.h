@@ -20,6 +20,8 @@ struct Database {
 
        long pblksiz;
        long dblksiz;
+       int pblkshift;
+       int dblkshift;
 
        /* name of .pag and .dir files */
        char pagbuf[PBLKSIZ] __attribute__((aligned(2)));
