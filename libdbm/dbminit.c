@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
+#include <ctype.h>
 
 static int
 count_bits(unsigned long v)
@@ -43,6 +44,8 @@ parse_value(const char *svalue)
 {
         char *endptr;
         unsigned long v;
+
+        errno = 0;
         v = strtoul(svalue, &endptr, 0);
         if (errno || endptr == svalue)
                 return -1;
@@ -50,19 +53,27 @@ parse_value(const char *svalue)
          * Make sure this is a power of two (IE only one bit set)
          * and it is not unreasonably large.
          */
-        if (v > MAXBLKSIZ)
+        if (v < MINBLKSIZ || v > MAXBLKSIZ)
                 return -1;
+
         if (count_bits(v) != 1)
                 return -1;
+
         return (long)v;
 }
 
 static char *
 slide(const char *s)
 {
-        while (*s == ' ')
+        while (isblank((int)*s))
                 ++s;
         return (char *)s;
+}
+
+static int
+iseol(int c)
+{
+        return c == '\0' || c == '\r' || c == '\n';
 }
 
 static int
@@ -70,20 +81,41 @@ parse_params(Database *db, FILE *fp)
 {
         long pblksiz = -1;
         long dblksiz = -1;
-        char *line;
-        size_t len;
+        char *line = NULL;
+        size_t len = 0;
         int res = -1;
 
         while (getline(&line, &len, fp) != -1) {
                 long *pval;
-                char *key = line;
-                char *value = strchr(line, '=');
+                char *eol;
+                char *value;
+                char *key;
+
+                key = slide(line);
+
+                eol = strchr(key, '#');
+                if (eol != NULL)
+                        *eol = '\0';
+
+                /* Skip blank or comment-only lines */
+                if (iseol(*key))
+                        continue;
+
+                /*
+                 * Line is not blank, not a comment.
+                 * It should have "KEY = VALUE" syntax.
+                 */
+                value = strchr(key, '=');
                 if (value == NULL)
                         goto out;
-
                 value = slide(value + 1);
-                key = slide(key);
 
+                /*
+                 * Shortcut our syntax parsing, since so far there are
+                 * only two keys to check for.
+                 * Don't bail on unidentified keys, so long as the syntax
+                 * is okay; we may add keys in the future.
+                 */
                 if (*key == 'P')
                         pval = &pblksiz;
                 else if (*key == 'D')
@@ -92,7 +124,7 @@ parse_params(Database *db, FILE *fp)
                         continue;
                 ++key;
 
-                if (!pval || !!strncmp("BLKSIZ", key, sizeof("BLKSIZ")))
+                if (!!strncmp("BLKSIZ", key, strlen("BLKSIZ")))
                         continue;
 
                 if ((*pval = parse_value(value)) < 0)
@@ -107,7 +139,8 @@ parse_params(Database *db, FILE *fp)
         res = 0;
 
 out:
-        fclose(fp);
+        if (line != NULL)
+                free(line);
         return res;
 }
 
@@ -125,7 +158,8 @@ getparams(Database *db, const char *fname)
                 db->pblksiz = PBLKSIZ;
                 db->dblksiz = DBLKSIZ;
 
-                fprintf(fp, "PBLKSIZ=%u\nDBLKSIZ=%u\n",
+                fprintf(fp, "%s\nPBLKSIZ=%u\nDBLKSIZ=%u\n",
+                        "# Auto-generated. Do not manually edit or you will break the database!",
                         PBLKSIZ, DBLKSIZ);
                 res = 0;
         } else {

@@ -12,6 +12,7 @@ enum {
         DBLKSIZ = 8192,
         BYTESIZ = 8,
         MAXBLKSIZ = 65536,
+        MINBLKSIZ = 512,
 };
 
 /* Options - some are preprocessed, so they can't be enums */
