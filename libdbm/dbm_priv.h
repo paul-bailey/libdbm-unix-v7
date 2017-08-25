@@ -18,6 +18,9 @@ struct Database {
        long blkno;
        long hmask;
 
+       long pblksiz;
+       long dblksiz;
+
        /* name of .pag and .dir files */
        char pagbuf[PBLKSIZ] __attribute__((aligned(2)));
        char dirbuf[DBLKSIZ] __attribute__((aligned(2)));
