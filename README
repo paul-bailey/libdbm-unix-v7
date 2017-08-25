@@ -1,3 +1,5 @@
+.. -*- rst -*-
+
 ==============
 libdbm-unix-v7
 ==============
@@ -13,11 +15,20 @@ This is libdbm derived from version 7 UNIX (see COPYING regarding the
 license), modernized to contemporary Gnu C and using Auto-tools, and
 eventually even improved.
 
+This code is **AS-IS**.
+
 Rationale
 ---------
 
 My doctor said I need a hobby.
 
+
+TODO list
+---------
+
+* dbm_close() does not flush.
+* Make the page size be variable. Perhaps add a third file describing
+  the database parameters instead of using the ``PBLKSIZ`` const *et al.*
 
 Maintainer
 ----------
