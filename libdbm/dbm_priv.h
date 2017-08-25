@@ -2,6 +2,7 @@
 #define DBM_PRIV_H
 
 #include "egdbm.h"
+#include <stddef.h>
 
 #ifndef EXPORT
 # ifdef __GNUC__
@@ -24,8 +25,8 @@ struct Database {
        int dblkshift;
 
        /* name of .pag and .dir files */
-       char pagbuf[PBLKSIZ] __attribute__((aligned(2)));
-       char dirbuf[DBLKSIZ] __attribute__((aligned(2)));
+       char *pagbuf;
+       char *dirbuf;
 
        /* descriptors of .pag and .dir files */
        int dirfd;
@@ -45,9 +46,9 @@ extern int getbit(Database *db);
 extern void dbm_access(Database *db, long hash);
 
 /* buffer.c */
-extern datum makdatum(char buf[PBLKSIZ], int idx);
-extern void delitem(char buf[PBLKSIZ], int idx);
-extern int additem(char buf[PBLKSIZ], datum item);
+extern datum makdatum(char *buf, int idx, size_t pblksiz);
+extern void delitem(char *buf, int idx, size_t pblksiz);
+extern int additem(char *buf, datum item, size_t pblksiz);
 
 /*
  * As a general rule, shared-object libraries shouldn't print to

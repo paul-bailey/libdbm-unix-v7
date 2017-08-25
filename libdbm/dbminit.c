@@ -182,12 +182,20 @@ dbminit(const char *file)
 
         db = malloc(sizeof(*db));
         if (!db)
-                goto emalloc;
+                goto emallocdb;
         memset(db, 0, sizeof(*db));
 
         sprintf(fname, "%s.par", file);
         if (getparams(db, fname) < 0)
                 goto eparams;
+
+        db->pagbuf = malloc(db->pblksiz);
+        if (!db->pagbuf)
+                goto emallocpag;
+
+        db->dirbuf = malloc(db->dblksiz);
+        if (!db->dirbuf)
+                goto emallocdir;
 
         sprintf(fname, "%s.pag", file);
         db->pagfd = open(fname, O_CREAT | O_RDWR, 0666);
@@ -211,9 +219,13 @@ dbminit(const char *file)
 edirfd:
         close(db->pagfd);
 epagfd:
+        free(db->dirbuf);
+emallocdir:
+        free(db->pagbuf);
+emallocpag:
 eparams:
         free(db);
-emalloc:
+emallocdb:
         DBG("cannot init DBM\n");
         return NULL;
 }

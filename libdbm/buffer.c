@@ -8,7 +8,7 @@
  * @idx: Visible index of datum in @buf
  */
 datum
-makdatum(char buf[PBLKSIZ], int idx)
+makdatum(char *buf, int idx, size_t pblksiz)
 {
         short *sp;
         datum item;
@@ -18,7 +18,7 @@ makdatum(char buf[PBLKSIZ], int idx)
                 item.dptr = NULL;
                 item.dsize = 0;
         } else {
-                int t = PBLKSIZ;
+                int t = pblksiz;
                 if (idx > 0)
                         t = sp[idx];
                 item.dptr = buf + sp[idx + 1];
@@ -35,7 +35,7 @@ makdatum(char buf[PBLKSIZ], int idx)
  * The program will abort if @idx is not a datum stored in @buf.
  */
 void
-delitem(char buf[PBLKSIZ], int idx)
+delitem(char *buf, int idx, size_t pblksiz)
 {
         short *sp;
         int datai, previ, botti, idxi;
@@ -45,7 +45,7 @@ delitem(char buf[PBLKSIZ], int idx)
                 goto bad;
 
         datai = sp[idx + 1];
-        previ = idx > 0 ? sp[idx] : PBLKSIZ;
+        previ = idx > 0 ? sp[idx] : pblksiz;
         botti = sp[sp[0]];
 
         /* Maybe move data to fill in hole. */
@@ -86,13 +86,13 @@ bad:
  * buffer the return value will be -1.
  */
 int
-additem(char buf[PBLKSIZ], datum item)
+additem(char *buf, datum item, size_t pblksiz)
 {
         short *sp;
         int i;
 
         sp = (short *)buf;
-        i = sp[0] > 0 ? sp[sp[0]] : PBLKSIZ;
+        i = sp[0] > 0 ? sp[sp[0]] : pblksiz;
         i -= item.dsize;
 
         /* Make sure we can fit index no. and data */

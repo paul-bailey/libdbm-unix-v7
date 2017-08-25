@@ -28,13 +28,13 @@ hmask_cycle(Database *db, long hash)
 
 /* Make sure @buf is a valid block, panic otherwise */
 static void
-check_block(char buf[PBLKSIZ])
+check_block(char *buf, size_t bufsize)
 {
         short *sp;
         int t, i;
 
         sp = (short *)buf;
-        t = PBLKSIZ;
+        t = bufsize;
         for (i = 0; i < sp[0]; i++) {
                 if (sp[i + 1] > t)
                         goto bad;
@@ -47,7 +47,7 @@ check_block(char buf[PBLKSIZ])
 bad:
         DBG("bad block\n");
         abort();
-        memset(buf, 0, PBLKSIZ);
+        memset(buf, 0, bufsize);
 }
 
 /*
@@ -61,11 +61,11 @@ dbm_access(Database *db, long hash)
 
         if (db->blkno != db->access_oldb) {
                 int count;
-                memset(db->pagbuf, 0, PBLKSIZ);
-                lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-                count = read(db->pagfd, db->pagbuf, PBLKSIZ);
+                memset(db->pagbuf, 0, db->pblksiz);
+                lseek(db->pagfd, db->blkno * db->pblksiz, 0);
+                count = read(db->pagfd, db->pagbuf, db->pblksiz);
                 (void)count;
-                check_block(db->pagbuf);
+                check_block(db->pagbuf, db->pblksiz);
                 db->access_oldb = db->blkno;
         }
 }

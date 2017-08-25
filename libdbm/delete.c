@@ -12,7 +12,7 @@ delete(Database *db, datum key)
 
         dbm_access(db, calchash(key));
         for (i = 0;; i += 2) {
-                item = makdatum(db->pagbuf, i);
+                item = makdatum(db->pagbuf, i, db->pblksiz);
                 if (item.dptr == NULL)
                         return -1;
                 if (cmpdatum(key, item) == 0) {
@@ -21,13 +21,13 @@ delete(Database *db, datum key)
                          * Do not update i here because
                          * delitem() shifts items over.
                          */
-                        delitem(db->pagbuf, i);
-                        delitem(db->pagbuf, i);
+                        delitem(db->pagbuf, i, db->pblksiz);
+                        delitem(db->pagbuf, i, db->pblksiz);
                         break;
                 }
         }
-        lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-        count = write(db->pagfd, db->pagbuf, PBLKSIZ);
+        lseek(db->pagfd, db->blkno * db->pblksiz, 0);
+        count = write(db->pagfd, db->pagbuf, db->pblksiz);
         (void)count;
         return 0;
 }

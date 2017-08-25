@@ -22,14 +22,14 @@ fetch(Database *db, datum key)
         dbm_access(db, calchash(key));
         for (i = 0;; i += 2) {
                 DBG("i=%d, gonna find item\n", i);
-                item = makdatum(db->pagbuf, i);
+                item = makdatum(db->pagbuf, i, db->pblksiz);
                 if (item.dptr == NULL) {
                         DBG("item not found\n");
                         return item;
                 }
 
                 if (cmpdatum(key, item) == 0) {
-                        item = makdatum(db->pagbuf, i + 1);
+                        item = makdatum(db->pagbuf, i + 1, db->pblksiz);
                         if (item.dptr == NULL)
                                 DBG("items not in pairs\n");
                         return item;

@@ -26,9 +26,9 @@ firsthash(Database *db, long hash)
 
         for (;;) {
                 dbm_access(db, hash);
-                bitem = makdatum(db->pagbuf, 0);
+                bitem = makdatum(db->pagbuf, 0, db->pblksiz);
                 for (i = 2;; i += 2) {
-                        item = makdatum(db->pagbuf, i);
+                        item = makdatum(db->pagbuf, i, db->pblksiz);
                         if (item.dptr == NULL)
                                 break;
                         if (cmpdatum(bitem, item) < 0)
@@ -60,7 +60,7 @@ nextkey(Database *db, datum key)
         dbm_access(db, hash);
         f = 1;
         for (i = 0;; i += 2) {
-                item = makdatum(db->pagbuf, i);
+                item = makdatum(db->pagbuf, i, db->pblksiz);
                 if (item.dptr == NULL)
                         break;
                 if (cmpdatum(key, item) <= 0)

@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 /* Create a new page in the database */
@@ -9,39 +10,46 @@ static int
 store_helper(Database *db, datum key, datum dat)
 {
         int i, count;
-        char ovfbuf[PBLKSIZ];
+        char *ovfbuf;
 
-        if (key.dsize + dat.dsize + 3 * sizeof(short) >= PBLKSIZ) {
+        if (key.dsize + dat.dsize + 3 * sizeof(short) >= db->pblksiz) {
                 DBG("entry too big\n");
                 return -1;
         }
 
-        memset(ovfbuf, 0, PBLKSIZ);
+        ovfbuf = malloc(db->pblksiz);
+        if (!ovfbuf) {
+                DBG("Out of memory\n");
+                return -1;
+        }
+
+        memset(ovfbuf, 0, db->pblksiz);
         for (i = 0;;) {
-                datum item = makdatum(db->pagbuf, i);
+                datum item = makdatum(db->pagbuf, i, db->pblksiz);
                 if (item.dptr == NULL)
                         break;
                 if (!!(calchash(item) & (db->hmask + 1))) {
-                        additem(ovfbuf, item);
-                        delitem(db->pagbuf, i);
-                        item = makdatum(db->pagbuf, i);
+                        additem(ovfbuf, item, db->pblksiz);
+                        delitem(db->pagbuf, i, db->pblksiz);
+                        item = makdatum(db->pagbuf, i, db->pblksiz);
                         if (item.dptr == NULL) {
                                 DBG("split not paired\n");
                                 break;
                         }
-                        additem(ovfbuf, item);
-                        delitem(db->pagbuf, i);
+                        additem(ovfbuf, item, db->pblksiz);
+                        delitem(db->pagbuf, i, db->pblksiz);
                         continue;
                 }
                 i += 2;
         }
 
-        lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-        count = write(db->pagfd, db->pagbuf, PBLKSIZ);
+        lseek(db->pagfd, db->blkno * db->pblksiz, 0);
+        count = write(db->pagfd, db->pagbuf, db->pblksiz);
         (void)count;
-        lseek(db->pagfd, (db->blkno + db->hmask + 1) * PBLKSIZ, 0);
-        count = write(db->pagfd, ovfbuf, PBLKSIZ);
+        lseek(db->pagfd, (db->blkno + db->hmask + 1) * db->pblksiz, 0);
+        count = write(db->pagfd, ovfbuf, db->pblksiz);
         (void)count;
+        free(ovfbuf);
 
         setbit(db);
 
@@ -63,32 +71,32 @@ store(Database *db, datum key, datum dat)
         dbm_access(db, calchash(key));
 
         for (i = 0;; i += 2) {
-                datum item = makdatum(db->pagbuf, i);
+                datum item = makdatum(db->pagbuf, i, db->pblksiz);
                 if (item.dptr == NULL)
                         break;
                 if (cmpdatum(key, item) == 0) {
                         /* TODO: Is this a collision? */
-                        delitem(db->pagbuf, i);
-                        delitem(db->pagbuf, i);
+                        delitem(db->pagbuf, i, db->pblksiz);
+                        delitem(db->pagbuf, i, db->pblksiz);
                         break;
                 }
         }
 
-        keyi = additem(db->pagbuf, key);
+        keyi = additem(db->pagbuf, key, db->pblksiz);
         if (keyi < 0)
                 goto ekey;
 
-        datai = additem(db->pagbuf, dat);
+        datai = additem(db->pagbuf, dat, db->pblksiz);
         if (datai < 0)
                 goto edat;
 
-        lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-        count = write(db->pagfd, db->pagbuf, PBLKSIZ);
+        lseek(db->pagfd, db->blkno * db->pblksiz, 0);
+        count = write(db->pagfd, db->pagbuf, db->pblksiz);
         (void)count;
         return 0;
 
 edat:
-        delitem(db->pagbuf, keyi);
+        delitem(db->pagbuf, keyi, db->pblksiz);
 ekey:
         if (store_helper(db, key, dat) < 0)
                 return -1;
