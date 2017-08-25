@@ -5,10 +5,10 @@ libegdbm_la_SOURCES = \
  datum.c \
  delete.c \
  store.c \
- bits.c \
+ dirbuf.c \
  key.c \
  fetch.c \
- buffer.c \
+ pagbuf.c \
  dbm_close.c \
  dbminit.c
 
