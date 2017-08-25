@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 Database EXPORT*
-dbminit(char *file)
+dbminit(const char *file)
 {
         struct stat statb;
         Database *db;

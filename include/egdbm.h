@@ -24,7 +24,7 @@ typedef struct {
 /* FIXME: Make this type threadsafe. Currently it is not. */
 typedef struct Database Database;
 
-extern Database *dbminit(char *file);
+extern Database *dbminit(const char *file);
 extern long forder(Database *db, datum key);
 extern datum fetch(Database *db, datum key);
 extern int delete(Database *db, datum key);
