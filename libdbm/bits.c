@@ -31,9 +31,11 @@ getbit(Database *db)
 
         fill_bitidx(db->bitno, &b);
         if (b.b != db->getbit_oldb) {
+                int count;
                 memset(db->dirbuf, 0, DBLKSIZ);
                 lseek(db->dirfd, (long)b.b * DBLKSIZ, 0);
-                read(db->dirfd, db->dirbuf, DBLKSIZ);
+                count = read(db->dirfd, db->dirbuf, DBLKSIZ);
+                (void)count;
                 db->getbit_oldb = b.b;
         }
 
@@ -44,6 +46,7 @@ void
 setbit(Database *db)
 {
         struct bitidx_t b;
+        int count;
 
         if (db->bitno > db->maxbno) {
                 db->maxbno = db->bitno;
@@ -53,5 +56,6 @@ setbit(Database *db)
 
         db->dirbuf[b.i] |= 1 << b.n;
         lseek(db->dirfd, (long)b.b * DBLKSIZ, 0);
-        write(db->dirfd, db->dirbuf, DBLKSIZ);
+        count = write(db->dirfd, db->dirbuf, DBLKSIZ);
+        (void)count;
 }

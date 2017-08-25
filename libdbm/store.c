@@ -8,7 +8,7 @@
 static int
 store_helper(Database *db, datum key, datum dat)
 {
-        int i;
+        int i, count;
         char ovfbuf[PBLKSIZ];
 
         if (key.dsize + dat.dsize + 3 * sizeof(short) >= PBLKSIZ) {
@@ -37,9 +37,11 @@ store_helper(Database *db, datum key, datum dat)
         }
 
         lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-        write(db->pagfd, db->pagbuf, PBLKSIZ);
+        count = write(db->pagfd, db->pagbuf, PBLKSIZ);
+        (void)count;
         lseek(db->pagfd, (db->blkno + db->hmask + 1) * PBLKSIZ, 0);
-        write(db->pagfd, ovfbuf, PBLKSIZ);
+        count = write(db->pagfd, ovfbuf, PBLKSIZ);
+        (void)count;
 
         setbit(db);
 
@@ -55,7 +57,7 @@ store_helper(Database *db, datum key, datum dat)
 int EXPORT
 store(Database *db, datum key, datum dat)
 {
-        int i;
+        int i, count;
         int keyi, datai;
 
         dbm_access(db, calchash(key));
@@ -81,7 +83,8 @@ store(Database *db, datum key, datum dat)
                 goto edat;
 
         lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-        write(db->pagfd, db->pagbuf, PBLKSIZ);
+        count = write(db->pagfd, db->pagbuf, PBLKSIZ);
+        (void)count;
         return 0;
 
 edat:

@@ -60,9 +60,11 @@ dbm_access(Database *db, long hash)
         hmask_cycle(db, hash);
 
         if (db->blkno != db->access_oldb) {
+                int count;
                 memset(db->pagbuf, 0, PBLKSIZ);
                 lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-                read(db->pagfd, db->pagbuf, PBLKSIZ);
+                count = read(db->pagfd, db->pagbuf, PBLKSIZ);
+                (void)count;
                 check_block(db->pagbuf);
                 db->access_oldb = db->blkno;
         }

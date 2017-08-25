@@ -7,7 +7,7 @@
 int EXPORT
 delete(Database *db, datum key)
 {
-        int i;
+        int i, count;
         datum item;
 
         dbm_access(db, calchash(key));
@@ -27,6 +27,7 @@ delete(Database *db, datum key)
                 }
         }
         lseek(db->pagfd, db->blkno * PBLKSIZ, 0);
-        write(db->pagfd, db->pagbuf, PBLKSIZ);
+        count = write(db->pagfd, db->pagbuf, PBLKSIZ);
+        (void)count;
         return 0;
 }
