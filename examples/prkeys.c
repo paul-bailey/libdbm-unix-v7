@@ -35,6 +35,10 @@ main(int argc, char **argv)
                 printf("\thash:  %lu\n", calchash(key));
         }
         printf("db->maxbno = %lu\n", db->maxbno);
+        printf("db->dblksiz = %lu\n", db->dblksiz);
+        printf("db->dblkshift = %u\n", db->dblkshift);
+        printf("db->pblksiz = %lu\n", db->pblksiz);
+        printf("db->pblkshift = %u\n", db->pblkshift);
         dbm_close(db);
         return 0;
 }

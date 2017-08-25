@@ -18,8 +18,8 @@ fill_bitidx(Database *db, struct bitidx_t *b)
         long bitno = db->bitno;
         b->n = bitno % BYTESIZ;
         bn = bitno / BYTESIZ;
-        b->i = bn % db->dblksiz;
-        b->b = bn / db->dblksiz;
+        b->i = bn & (db->dblksiz - 1);
+        b->b = bn >> db->dblkshift;
 }
 
 int
