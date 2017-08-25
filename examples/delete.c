@@ -29,5 +29,6 @@ main(int argc, char **argv)
                 fprintf(stderr, "delete() failed\n");
                 exit(EXIT_FAILURE);
         }
+        dbm_close(db);
         return 0;
 }

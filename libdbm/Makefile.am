@@ -9,6 +9,7 @@ libegdbm_la_SOURCES = \
  key.c \
  fetch.c \
  buffer.c \
+ dbm_close.c \
  dbminit.c
 
 libegdbm_la_CPPFLAGS = -Wall -I$(top_srcdir)/include

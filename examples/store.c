@@ -32,5 +32,6 @@ main(int argc, char **argv)
                 exit(EXIT_FAILURE);
         }
         printf("Stored KEY=%s DAT=%s\n", key.dptr, data.dptr);
+        dbm_close(db);
         return 0;
 }

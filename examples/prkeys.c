@@ -35,5 +35,6 @@ main(int argc, char **argv)
                 printf("\thash:  %lu\n", calchash(key));
         }
         printf("db->maxbno = %lu\n", db->maxbno);
+        dbm_close(db);
         return 0;
 }

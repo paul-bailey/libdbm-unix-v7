@@ -27,5 +27,6 @@ main(int argc, char **argv)
         if (res.dptr == NULL)
                 res.dptr = "(NULL)";
         printf("%s\n", res.dptr);
+        dbm_close(db);
         return 0;
 }

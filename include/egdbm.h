@@ -31,6 +31,7 @@ extern int delete(Database *db, datum key);
 extern int store(Database *db, datum key, datum dat);
 extern datum firstkey(Database *db);
 extern datum nextkey(Database *db, datum key);
+extern void dbm_close(Database *db);
 
 extern long calchash(datum item);
 
