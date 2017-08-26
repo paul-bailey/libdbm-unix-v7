@@ -42,8 +42,11 @@ extern int cmpdatum(datum d1, datum d2);
 extern void setbit(Database *db);
 extern int getbit(Database *db);
 
-/* forder.c */
+/* dbm_access.c */
 extern void dbm_access(Database *db, long hash);
+
+/* forder.c */
+extern void forder_hash(Database *db, long hash);
 
 /* buffer.c */
 extern datum makdatum(char *buf, int idx, size_t pblksiz);

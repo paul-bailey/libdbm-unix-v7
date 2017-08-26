@@ -9,6 +9,7 @@ libegdbm_la_SOURCES = \
  key.c \
  fetch.c \
  pagbuf.c \
+ dbm_access.c \
  dbm_close.c \
  dbminit.c
 
